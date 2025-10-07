@@ -61,45 +61,40 @@ func createBook(context *gin.Context) {
 }
 
 func checkoutBook(context *gin.Context) {
-	id, ok := context.GetQuery("id")
-
-	if !ok {
-		context.JSON(http.StatusBadRequest, gin.H{"ERROR": "You're missing something on your query"})
-		return
-	}
-
-	book, err := getBookById(id)
-
-	if err != nil {
-		context.JSON(http.StatusNotFound, gin.H{"ERROR": err.Error()})
-		return
-	}
-
-	if book.Quantity <= 0 {
-		context.JSON(http.StatusBadRequest, gin.H{"ERROR": "This book isn't available"})
-		return
-	}
-
-	book.Quantity -= 1
-	context.IndentedJSON(http.StatusOK, book)
+	updateBookQuantity(context, func(b *book) error {
+		if b.Quantity <= 0 {
+			return errors.New("This book isn't available")
+		}
+		b.Quantity--
+		return nil
+	})
 }
 
 func checkinBook(context *gin.Context) {
-	id, ok := context.GetQuery("id")
+	updateBookQuantity(context, func(b *book) error {
+		b.Quantity++
+		return nil
+	})
+}
 
+func updateBookQuantity(context *gin.Context, updateFn func(*book) error) {
+	id, ok := context.GetQuery("id")
 	if !ok {
 		context.JSON(http.StatusBadRequest, gin.H{"ERROR": "You're missing something on your query"})
 		return
 	}
 
 	book, err := getBookById(id)
-
 	if err != nil {
 		context.JSON(http.StatusNotFound, gin.H{"ERROR": err.Error()})
 		return
 	}
 
-	book.Quantity += 1
+	if err := updateFn(book); err != nil {
+		context.JSON(http.StatusBadRequest, gin.H{"ERROR": err.Error()})
+		return
+	}
+
 	context.IndentedJSON(http.StatusOK, book)
 }
 
