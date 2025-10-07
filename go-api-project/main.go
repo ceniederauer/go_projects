@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -25,6 +26,28 @@ func getBooks(context *gin.Context) {
 	context.IndentedJSON(http.StatusOK, library)
 }
 
+func bookById(context *gin.Context) {
+	id := context.Param("id")
+	book, err := getBookById(id)
+
+	if err != nil {
+		context.JSON(http.StatusBadRequest, gin.H{"ERROR": err.Error()})
+		return
+	}
+
+	context.IndentedJSON(http.StatusOK, book)
+}
+
+func getBookById(id string) (*book, error) {
+	for i, b := range library {
+		if b.ID == id {
+			return &library[i], nil
+		}
+	}
+
+	return nil, errors.New("The book that you're searching isn't on our library")
+}
+
 func createBook(context *gin.Context) {
 	var newBook book
 
@@ -42,6 +65,7 @@ func main() {
 
 	router.GET("/books", getBooks)
 	router.POST("/books", createBook)
+	router.GET("/books/:id", bookById)
 
 	router.Run("localhost:8080")
 }
