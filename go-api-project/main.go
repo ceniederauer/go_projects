@@ -31,7 +31,7 @@ func bookById(context *gin.Context) {
 	book, err := getBookById(id)
 
 	if err != nil {
-		context.JSON(http.StatusBadRequest, gin.H{"ERROR": err.Error()})
+		context.JSON(http.StatusNotFound, gin.H{"ERROR": err.Error()})
 		return
 	}
 
@@ -60,12 +60,57 @@ func createBook(context *gin.Context) {
 	context.IndentedJSON(http.StatusCreated, newBook)
 }
 
+func checkoutBook(context *gin.Context) {
+	id, ok := context.GetQuery("id")
+
+	if !ok {
+		context.JSON(http.StatusBadRequest, gin.H{"ERROR": "You're missing something on your query"})
+		return
+	}
+
+	book, err := getBookById(id)
+
+	if err != nil {
+		context.JSON(http.StatusNotFound, gin.H{"ERROR": err.Error()})
+		return
+	}
+
+	if book.Quantity <= 0 {
+		context.JSON(http.StatusBadRequest, gin.H{"ERROR": "This book isn't available"})
+		return
+	}
+
+	book.Quantity -= 1
+	context.IndentedJSON(http.StatusOK, book)
+}
+
+func checkinBook(context *gin.Context) {
+	id, ok := context.GetQuery("id")
+
+	if !ok {
+		context.JSON(http.StatusBadRequest, gin.H{"ERROR": "You're missing something on your query"})
+		return
+	}
+
+	book, err := getBookById(id)
+
+	if err != nil {
+		context.JSON(http.StatusNotFound, gin.H{"ERROR": err.Error()})
+		return
+	}
+
+	book.Quantity += 1
+	context.IndentedJSON(http.StatusOK, book)
+}
+
 func main() {
 	router := gin.Default()
 
 	router.GET("/books", getBooks)
 	router.POST("/books", createBook)
 	router.GET("/books/:id", bookById)
+	router.POST("/checkout", checkoutBook)
+	router.POST("/checkin", checkinBook)
 
 	router.Run("localhost:8080")
 }
